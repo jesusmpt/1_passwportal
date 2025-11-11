@@ -1,7 +1,8 @@
-import { Client } from '@microsoft/microsoft-graph-client';
-import 'isomorphic-fetch';
+// api/methods/index.js
+const { Client } = require('@microsoft/microsoft-graph-client');
+require('isomorphic-fetch');
 
-export default async function (context, req) {
+module.exports = async function (context, req) {
   try {
     const userId = req.headers['x-ms-client-principal-id'];
 
@@ -9,11 +10,12 @@ export default async function (context, req) {
     const clientId = '8dcec823-8928-41f7-a9b5-e85db1dc6c12';
     const clientSecret = 'fcy8Q~E2wPa6u5EyxLOrbS4Pp8dePnFbMFkQXc7Y';
 
+    // Obtener token
     const tokenResponse = await fetch(
-      \https://login.microsoftonline.com/\/oauth2/v2.0/token\,
+      `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
       {
-        method:'POST',
-        headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
           client_id: clientId,
           scope: 'https://graph.microsoft.com/.default',
@@ -26,12 +28,17 @@ export default async function (context, req) {
     const tokenData = await tokenResponse.json();
     const accessToken = tokenData.access_token;
 
-    const client = Client.init({ authProvider: done => done(null, accessToken) });
+    const client = Client.init({
+      authProvider: done => done(null, accessToken)
+    });
 
-    const user = await client.api(\/users/\\)
-      .select('displayName,givenName,surname,mail,userPrincipalName').get();
+    // Obtener info del usuario
+    const user = await client.api(`/users/${userId}`)
+      .select('displayName,givenName,surname,mail,userPrincipalName')
+      .get();
 
-    const methodsResponse = await client.api(\/users/\/authentication/methods\).get();
+    // Obtener métodos de autenticación
+    const methodsResponse = await client.api(`/users/${userId}/authentication/methods`).get();
 
     const availableMethods = methodsResponse.value.map(m => ({
       type: m['@odata.type'].split('.').pop(),
@@ -39,13 +46,20 @@ export default async function (context, req) {
       phoneNumber: m.phoneNumber || ''
     }));
 
-    const passwordlessMethods = ['fido2AuthenticationMethod','microsoftAuthenticatorAuthenticationMethod'];
-    const missing = passwordlessMethods.filter(m => !availableMethods.some(am => am.type.toLowerCase()===m.toLowerCase()));
+    const passwordlessMethods = ['fido2AuthenticationMethod', 'microsoftAuthenticatorAuthenticationMethod'];
+    const missing = passwordlessMethods.filter(
+      m => !availableMethods.some(am => am.type.toLowerCase() === m.toLowerCase())
+    );
 
-    context.res = { status:200, body:{ user, availableMethods, missingPasswordless: missing } };
-
-  } catch(error) {
+    context.res = {
+      status: 200,
+      body: { user, availableMethods, missingPasswordless: missing }
+    };
+  } catch (error) {
     console.error(error);
-    context.res = { status:500, body:{error: error.message} };
+    context.res = {
+      status: 500,
+      body: { error: error.message }
+    };
   }
-}
+};
