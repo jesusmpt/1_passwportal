@@ -1,4 +1,3 @@
-// api/methods/index.js
 const { Client } = require('@microsoft/microsoft-graph-client');
 require('isomorphic-fetch');
 
@@ -10,7 +9,6 @@ module.exports = async function (context, req) {
     const clientId = '8dcec823-8928-41f7-a9b5-e85db1dc6c12';
     const clientSecret = 'fcy8Q~E2wPa6u5EyxLOrbS4Pp8dePnFbMFkQXc7Y';
 
-    // Obtener token
     const tokenResponse = await fetch(
       `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
       {
@@ -32,12 +30,10 @@ module.exports = async function (context, req) {
       authProvider: done => done(null, accessToken)
     });
 
-    // Obtener info del usuario
     const user = await client.api(`/users/${userId}`)
       .select('displayName,givenName,surname,mail,userPrincipalName')
       .get();
 
-    // Obtener métodos de autenticación
     const methodsResponse = await client.api(`/users/${userId}/authentication/methods`).get();
 
     const availableMethods = methodsResponse.value.map(m => ({
