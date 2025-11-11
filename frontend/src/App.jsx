@@ -3,27 +3,33 @@ import { useEffect, useState } from "react";
 function App() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/methods")
       .then(async (res) => {
         if (res.status === 401) {
           window.location.href = "/login";
+        } else if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || "Error desconocido");
         } else {
-          const json = await res.json();
-          setData(json);
+          return res.json();
         }
       })
-      .catch((err) => setError(err.message));
+      .then(json => setData(json))
+      .catch(err => setError(err.message))
+      .finally(() => setLoading(false));
   }, []);
 
+  if (loading) return <p>Cargando información...</p>;
   if (error) return <p>Error al obtener información: {error}</p>;
-  if (!data) return <p>Cargando información...</p>;
 
   return (
     <div>
       <h1>Bienvenido, {data.user.displayName}</h1>
       <p>Email: {data.user.mail}</p>
+
       <h2>Métodos de autenticación:</h2>
       <ul>
         {data.availableMethods.map((m, i) => (
@@ -32,12 +38,18 @@ function App() {
           </li>
         ))}
       </ul>
+
       <h3>Faltan para passwordless:</h3>
-      <ul>
-        {data.missingPasswordless.map((m, i) => (
-          <li key={i}>{m}</li>
-        ))}
-      </ul>
+      {data.missingPasswordless.length === 0 ? (
+        <p>Ya tienes todos los métodos passwordless configurados.</p>
+      ) : (
+        <ul>
+          {data.missingPasswordless.map((m, i) => (
+            <li key={i}>{m}</li>
+          ))}
+        </ul>
+      )}
+
       <button onClick={() => window.location.reload()}>
         Volver a comprobar
       </button>
