@@ -8,6 +8,9 @@ function App() {
   useEffect(() => {
     fetch("/api/methods")
       .then(async (res) => {
+        console.log('Status:', res.status);
+        const text = await res.text();
+        console.log('Body:', text);
         if (res.status === 401) {
           window.location.href = "/login";
         } else if (!res.ok) {
